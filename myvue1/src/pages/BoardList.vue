@@ -1,24 +1,24 @@
 <template>
   <div class="page-wrapper">
-
+    <!-- 상단 네비게이션 바 -->
     <AppNavbar />
-
 
     <main class="main-content">
       <div class="board-container">
         <h1>게시판</h1>
 
-
+        <!-- 검색 바 -->
         <div class="search-bar">
           <input 
             v-model="searchQuery" 
             type="text" 
             placeholder="검색어를 입력하세요" 
             class="input-search"
-            />
+          />
           <button @click="searchPosts" class="btn-search">검색</button>
         </div>
 
+        <!-- 게시글 목록 (테이블 형태) -->
         <table class="board-table">
           <thead>
             <tr>
@@ -29,7 +29,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="post in filteredPosts" :key="post.id">
+            <tr v-for="post in pagedPosts" :key="post.id">
               <td>{{ post.id }}</td>
               <td>
                 <router-link :to="'/board/' + post.id">
@@ -41,6 +41,23 @@
             </tr>
           </tbody>
         </table>
+
+        <!-- 페이지네이션 버튼 -->
+        <div class="pagination">
+          <button @click="prevPage" :disabled="currentPage === 1" class="btn-pagination">이전</button>
+          <button 
+            v-for="page in totalPages" 
+            :key="page" 
+            @click="goToPage(page)"
+            :class="['btn-pagination', { active: currentPage === page }]"
+          >
+            {{ page }}
+          </button>
+          <button @click="nextPage" :disabled="currentPage === totalPages" class="btn-pagination">다음</button>
+        </div>
+
+        <!-- 글쓰기 버튼 -->
+        <button @click="writePosts" class="btn-post">글쓰기</button>
       </div>
     </main>
 
@@ -55,68 +72,94 @@ import AppFooter from "@/components/AppFooter.vue";
 
 export default {
   name: "BoardList",
-  components: {
-    AppNavbar,
-    AppFooter,
-  },
+  components: { AppNavbar, AppFooter },
   data() {
     return {
       searchQuery: "",
       posts: [
-        { id: 1, title: "첫번째 게시글", content: "게시글 내용입니다.", writer: "Alice", createdAt: "2025-03-20" },
-        { id: 2, title: "두번째 게시글", content: "또 다른 게시글 내용입니다.", writer: "Bob", createdAt: "2025-03-21" },
       ],
+      currentPage: 1,
+      itemsPerPage: 5,
     };
   },
   computed: {
     filteredPosts() {
       if (!this.searchQuery) return this.posts;
-      return this.posts.filter(post => {
-        return (
-          post.title.includes(this.searchQuery) ||
-          post.content.includes(this.searchQuery) ||
-          post.writer.includes(this.searchQuery)
-        );
-      });
+      return this.posts.filter(post =>
+        post.title.includes(this.searchQuery) ||
+        post.content.includes(this.searchQuery) ||
+        post.writer.includes(this.searchQuery)
+      );
+    },
+    totalPages() {
+      return Math.ceil(this.filteredPosts.length / this.itemsPerPage);
+    },
+    pagedPosts() {
+      const start = (this.currentPage - 1) * this.itemsPerPage;
+      const end = this.currentPage * this.itemsPerPage;
+      return this.filteredPosts.slice(start, end);
     },
   },
   methods: {
     searchPosts() {
-      // 현재 computed에서 필터링되므로 별도 로직은 필요 없음.
+      
+      this.currentPage = 1; // 검색 시 첫 페이지로 이동
+    },
+    prevPage() {
+      if (this.currentPage > 1) this.currentPage--;
+    },
+    nextPage() {
+      if (this.currentPage < this.totalPages) this.currentPage++;
+    },
+    goToPage(page) {
+      this.currentPage = page;
+    },
+    writePosts() {
+      // 글쓰기 페이지로 이동 (예: /create)
+      this.$router.push("/create");
     },
   },
 };
 </script>
 
 <style scoped>
-/* 전체 페이지를 100vh로 채우고 flex로 배치 */
+/* 전체 페이지 */
 .page-wrapper {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
 }
 
-/* Navbar와 Footer는 고정하지 않고, 자연스럽게 배치 */
+/* 메인 콘텐츠 영역 */
 .main-content {
   flex: 1;
-  overflow: hidden; /* 스크롤이 발생하지 않도록 */
+  overflow: hidden;
 }
 
 /* 게시판 영역 */
 .board-container {
   max-width: 900px;
-  margin: 80px auto 20px; /* 상단 80px 여백: Navbar 높이 고려 */
+  margin: 80px auto 20px;
   padding: 20px;
   text-align: left;
 }
 
-/* 검색 바 스타일 */
+/* 검색 바 */
 .search-bar {
   margin-bottom: 20px;
   display: flex;
+  align-items: center;
 }
-.btn-search{
-  width: 10%;
+
+.input-search {
+  margin-right: 30px;
+  margin-top: 10px;
+  padding: 10px;
+  height: 40px;
+  flex: 1;
+}
+
+.btn-search {
   padding: 10px;
   background-color: #3490dc;
   border: none;
@@ -127,14 +170,7 @@ export default {
   margin-top: 10px;
 }
 
-.input-search{
-  margin-right: 30px;
-  margin-top: 10px;
-  padding: 10px;
-  height: 40px;
-}
-
-/* 게시판 테이블 스타일 */
+/* 게시판 테이블 */
 .board-table {
   width: 100%;
   border-collapse: collapse;
@@ -146,5 +182,41 @@ export default {
   border: 1px solid #ccc;
   padding: 10px;
   text-align: left;
+}
+
+/* 페이지네이션 */
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.btn-pagination {
+  padding: 8px 12px;
+  margin: 0 5px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.btn-pagination.active {
+  background-color: #3490dc;
+  color: #fff;
+  border-color: #3490dc;
+}
+
+/* 글쓰기 버튼 */
+.btn-post {
+  padding: 10px;
+  background-color: #3490dc;
+  border: none;
+  color: #fff;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  display: block;
+  margin: 0 auto;
+  float: right;
 }
 </style>

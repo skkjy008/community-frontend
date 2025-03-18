@@ -1,9 +1,11 @@
 <template>
   <nav class="navbar">
     <div class="navbar-container">
-      <router-link to="/boards" class="navbar-brand">My Bulletin Board</router-link>
+      <router-link to="/boards" class="navbar-brand">My Community Board</router-link>
       <ul class="navbar-nav">
-        <li><router-link to="/boards">게시판</router-link></li>
+        <div class="welcome-nickname">
+        <li>환영합니다. {{ nickname }} 님.</li>
+        </div>
         <li><router-link to="/mypage">마이페이지</router-link></li>
         <li><a href="#" @click.prevent="logout">로그아웃</a></li>
       </ul>
@@ -14,10 +16,16 @@
 <script>
 export default {
   name: "AppNavbar",
+  data() {
+    return {
+      nickname : localStorage.getItem("nickname"),
+    };
+  },
   methods: {
     logout() {
       localStorage.removeItem("jwtaccess");
       localStorage.removeItem("jwtrefresh");
+      localStorage.removeItem("username");
       this.$router.push("/");
     },
   },
@@ -45,6 +53,11 @@ export default {
   font-size: 1.2rem;
   text-decoration: none;
   color: #fff;
+}
+.welcome-nickname
+{
+  color: gold;
+  margin-right: 80px;
 }
 
 .navbar-nav {
