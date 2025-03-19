@@ -12,6 +12,7 @@
           <input 
           class="write-title" 
           type="text"
+          v-model="title"
           placeholder="제목을 입력하세요"
           required/>
         <div class="writer-line">
@@ -28,6 +29,7 @@
           <textarea 
           class="write-content" 
           type="text"
+          v-model="content"
           placeholder="내용을 입력하세요"
           required
           />
@@ -38,6 +40,14 @@
       <button @click="writePosts" class="upload-post">글쓰기</button>
       <button @click="cancelPosts" class="cancel-post">취소</button>
     </div>
+    <teleport to="body">
+      <DefaultModal 
+        v-model:visible="modalVisible" 
+        :message="modalMessage"
+        :showCancel="showModalCancel"
+        @confirmed="onModalConfirmed"
+        @cancelled="onModalCancelled" />
+    </teleport>
     </main>
 
     <!-- 하단 푸터 -->
@@ -48,73 +58,88 @@
 <script>
 import AppNavbar from "@/components/AppNavbar.vue";
 import AppFooter from "@/components/AppFooter.vue";
+import DefaultModal from "@/components/DefaultModal.vue";
 import axios from "axios";
 
 export default {
   name: "CreateBoard",
-  components: { AppNavbar, AppFooter },
+  components: { AppNavbar, AppFooter, DefaultModal },
   data() {
     return {
-      title : '',
-      content : '',
-      writer : localStorage.getItem("nickname") || '',
+      title: '',
+      content: '',
+      writer: localStorage.getItem("nickname") || '',
       modalVisible: false,
       modalMessage: '',
       uploadSuccess: false,
-      errors: {}
+      showModalCancel: false
     };
   },
   methods: {
     writePosts()
     {
-      try {
-        const response = axios.post('http://localhost:8080/api/boards/create',
+      console.log("click!");
+      if(!this.title.trim() || !this.content.trim())
+    {
+      this.modalMessage = '제목과 내용 모두 입력하세요,';
+      this.showModalCancel = false;
+      this.uploadSuccess = false;
+      this.modalVisible = true;
+      return;
+    }
+    axios.post("http://localhost:8080/api/boards/create",
+      {
+        title: this.title,
+        content: this.content,
+        writer: this.writer,
+      },
+    {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("jwtaccess")}`
+      }
+
+    }).then(response=>{
+          if(response.data.statusCode==2002)
           {
-            title: this.title,
-            content: this.content,
-            writer: this.writer,
-          });
-          if(response.data.statusCode===2002)
+          this.modalMessage = '게시글 작성이 완료 되었습니다!';
+          this.showModalCancel = false; 
+          this.modalVisible = true;
+          this.uploadSuccess = true;
+          }
+
+      }).catch(err => { // eslint-disable-line no-unused-vars
+        this.modalMessage = '게시글 작성 중 오류가 발생했습니다.';
+        this.showModalCancel = false;
+        this.modalVisible = true;
+
+      });
+
+    },
+    onModalConfirmed() {
+      this.modalVisible = false;
+      if(this.uploadSuccess)
+    {
+      this.$router.push('/boards');
+    }
+  },
+  onModalCancelled()
+  {
+    this.modalVisible = false;
+  },
+    cancelPosts()
+    {
+        if(this.title.trim() || this.content.trim())
           {
-            this.modalMessage = '게시글 작성이 완료 되었습니다!';
+            this.modalMessage = '현재 작성중인 내용이 존재합니다. 페이지를 벗어나면 사라집니다.';
+            this.showModalCancel = true;
             this.modalVisible = true;
             this.uploadSuccess = true;
           }
-        
-      } catch (err) {
-        if (err.response && err.response.data && err.response.data.statusCode === 4002) {
-          this.modalMessage = '제목을 써 주세요';
-        } else if(err.response && err.response.data && err.response.data.statusCode === 4003)
-        {
-          this.modalMessage = '내용을 써 주세요';
-        }
-        this.modalVisible = true;
-        this.registrationSuccess = false;
-      }
-
+        else
+          {
+          this.$router.push("/boards");
+          }
     },
-    cancelPosts()
-    {
-        this.$router.push("/boards");
-    },
-    validation()
-    {
-      let valid = true;
-      this.errors = {};
-
-        if(!this.title.trim())
-        {
-            this.errors.title = "제목을 써 주세요";
-            valid = false;
-        }
-      if(!this.title.trim())
-        {
-            this.errors.content = "내용을 써 주세요";
-            valid = false;
-        }
-        return valid;
-    }
-
   },
 };
 </script>

@@ -69,6 +69,7 @@
 <script>
 import AppNavbar from "@/components/AppNavbar.vue";
 import AppFooter from "@/components/AppFooter.vue";
+import axios from "axios";
 
 export default {
   name: "BoardList",
@@ -101,6 +102,26 @@ export default {
     },
   },
   methods: {
+
+    fetchPosts()
+    {
+      axios.get("http://localhost:8080/api/boards",{
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("jwtaccess")}`
+      }
+    })
+      .then(response =>
+        {
+          if(response.data.statusCode===200)
+        {
+          this.posts = response.data.data;
+        }
+        })
+      .catch(error =>{
+        console.log("게시글 조회 실패:",error);
+      })
+    },
+
     searchPosts() {
       
       this.currentPage = 1; // 검색 시 첫 페이지로 이동
@@ -118,6 +139,10 @@ export default {
       // 글쓰기 페이지로 이동 (예: /create)
       this.$router.push("/create");
     },
+  },
+  mounted()
+  {
+    this.fetchPosts();
   },
 };
 </script>
@@ -139,7 +164,7 @@ export default {
 /* 게시판 영역 */
 .board-container {
   max-width: 900px;
-  margin: 80px auto 20px;
+  margin: 70px auto 20px;
   padding: 20px;
   text-align: left;
 }
