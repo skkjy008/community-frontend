@@ -9,6 +9,12 @@
 
         <!-- 검색 바 -->
         <div class="search-bar">
+          <select v-model="searchType" class="search-type">
+            <option value="all">제목+내용</option>
+            <option value="title">제목</option>
+            <option value="content">내용</option>
+            <option value="writer">작성자</option>
+          </select>
           <input 
             v-model="searchQuery" 
             type="text" 
@@ -32,7 +38,7 @@
             <tr v-for="post in pagedPosts" :key="post.id">
               <td>{{ post.id }}</td>
               <td>
-                <router-link :to="'/board/' + post.id">
+                <router-link :to="'/boards/' + post.id">
                   {{ post.title }}
                 </router-link>
               </td>
@@ -77,21 +83,14 @@ export default {
   data() {
     return {
       searchQuery: "",
-      posts: [
-      ],
+      searchType: "all",
+      posts: [],
+      filteredPosts: [],
       currentPage: 1,
       itemsPerPage: 5,
     };
   },
   computed: {
-    filteredPosts() {
-      if (!this.searchQuery) return this.posts;
-      return this.posts.filter(post =>
-        post.title.includes(this.searchQuery) ||
-        post.content.includes(this.searchQuery) ||
-        post.writer.includes(this.searchQuery)
-      );
-    },
     totalPages() {
       return Math.ceil(this.filteredPosts.length / this.itemsPerPage);
     },
@@ -102,29 +101,49 @@ export default {
     },
   },
   methods: {
-
-    fetchPosts()
-    {
-      axios.get("http://localhost:8080/api/boards",{
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("jwtaccess")}`
-      }
-    })
-      .then(response =>
-        {
-          if(response.data.statusCode===200)
-        {
-          this.posts = response.data.data;
+    fetchPosts() {
+      axios.get("http://localhost:8080/api/boards", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("jwtaccess")}`
         }
-        })
-      .catch(error =>{
-        console.log("게시글 조회 실패:",error);
       })
+      .then(response => {
+        if(response.data.statusCode === 200) {
+          this.posts = response.data.data;
+          this.filteredPosts = this.posts;
+        }
+      })
+      .catch(error => {
+        console.log("게시글 조회 실패:", error);
+      });
     },
-
     searchPosts() {
-      
-      this.currentPage = 1; // 검색 시 첫 페이지로 이동
+      if (!this.searchQuery) {
+        this.filteredPosts = this.posts;
+      } else if(this.searchType === "title")
+      {
+        this.filteredPosts = this.posts.filter(post=>
+          post.title.includes(this.searchQuery)
+        );
+      }else if(this.searchType === "content")
+      {
+        this.filteredPosts = this.posts.filter(post=>
+          post.content.includes(this.searchQuery)
+        );
+      }else if(this.searchType === "writer")
+      {
+        this.filteredPosts = this.posts.filter(post =>
+            post.writer.includes(this.searchQuery)
+          );
+      }else
+      {
+        this.filteredPosts = this.posts.filter(post =>
+          post.title.includes(this.searchQuery) ||
+          post.content.includes(this.searchQuery) ||
+          post.writer.includes(this.searchQuery)  
+        );
+      }
+      this.currentPage = 1;
     },
     prevPage() {
       if (this.currentPage > 1) this.currentPage--;
@@ -136,12 +155,10 @@ export default {
       this.currentPage = page;
     },
     writePosts() {
-      // 글쓰기 페이지로 이동 (예: /create)
       this.$router.push("/create");
     },
   },
-  mounted()
-  {
+  mounted() {
     this.fetchPosts();
   },
 };
@@ -173,26 +190,42 @@ export default {
 .search-bar {
   margin-bottom: 20px;
   display: flex;
+  width: 400px;
   align-items: center;
+}
+.search-type
+{
+  width:300px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  font-size: 1rem;
+  color: #333;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 5 5-5z' fill='%233490dc'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 10px;
 }
 
 .input-search {
-  margin-right: 30px;
-  margin-top: 10px;
+  margin-right: 20px;
   padding: 10px;
   height: 40px;
   flex: 1;
 }
 
 .btn-search {
+
   padding: 10px;
+  width: 150px;
   background-color: #3490dc;
   border: none;
   color: #fff;
   font-weight: bold;
   border-radius: 4px;
   cursor: pointer;
-  margin-top: 10px;
 }
 
 /* 게시판 테이블 */
