@@ -18,7 +18,9 @@
         <div class="comment-section">
           <h2 class="comment-section-title">댓글</h2>
           <div class="comment-list">
-            <div class="comment-item" v-for="comment in comments" :key="comment.id">
+
+
+            <div class="comment-item" v-for="comment in nestedComments" :key="comment.id">
               <div class="comment-header">
                 <span class="comment-writer">{{ comment.writer }}</span>
                 <span class="comment-createdAt">{{ comment.createdAt }}</span>
@@ -27,11 +29,55 @@
                 {{ comment.content }}
                 <div class="comment-edit">
                     <a href="#" @click.prevent="toggleReply(comment)">답글</a>
-                    <a href="#" @click.prevent="toggleEdit(comment)">편집</a>
-                    <a href="#" @click.prevent="deleteComment(comment)">삭제</a>
+                    <a v-if="comment.writer === currentUser" href="#" @click.prevent="toggleEdit(comment)">편집</a>
+                    <a v-if="comment.writer === currentUser" href="#" @click.prevent="deleteComment(comment)">삭제</a>
+                </div>
+
+                <div class="reply-section" v-if="comment.showReply">
+                    <textarea v-model="comment.newReply" placeholder="답글을 입력하세요"></textarea>
+                    <button @click="submitReply(comment)">등록</button>
+                    <button @click="toggleReply(comment)">취소</button>
+                </div>
+
+                <div class="edit-section" v-if="comment.showEdit">
+                    <textarea v-model="comment.editContent" placeholder="댓글을 수정하세요">
+                    </textarea>
+                    <button @click="submitEdit(comment)">수정</button>
+                    <button @click="toggleEdit(comment)">취소</button>
                 </div>
             </div>
+
+            <!--답글 파트-->
+            <div class="child-comments" v-if="comment.replies && comment.replies.length">
+              <div class="comment-item reply-item" v-for="reply in comment.replies" :key="reply.id">
+                <div class="comment-header">
+                  <span class="comment-writer">{{ reply.writer }}</span>
+                  <span class="comment-createdAt">{{ reply.createdAt }}</span>
+                </div>
+                <div class="comment-content">
+                  {{ reply.content }}
+                  <div class="comment-edit">
+                    <a href="#" @click.prevent="toggleReply(reply)">답글</a>
+                    <a v-if="reply.writer === currentUser" href="#" @click.prevent="toggleEdit(reply)">편집</a>
+                    <a v-if="reply.writer === currentUser" href="#" @click.prevent="deleteComment(reply)">삭제</a>
+                  </div>
+                  <div class="reply-section" v-if="reply.showReply">
+                    <textarea v-model="reply.newReply" placeholder="답글을 입력하세요"></textarea>
+                    <button @click="submitReply(reply)">등록</button>
+                    <button @click="toggleReply(reply)">취소</button>
+                  </div>
+                  <div class="edit-section" v-if="reply.showEdit">
+                    <textarea v-model="reply.editContent" placeholder="댓글을 수정하세요"></textarea>
+                    <button @click="submitEdit(reply)">수정</button>
+                    <button @click="toggleEdit(reply)">취소</button>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            </div>
+
+
           </div>
           <div class="comment-input">
             <textarea v-model="newComment" placeholder="댓글을 입력하세요" ></textarea>
@@ -54,14 +100,35 @@
     data() {
       return {
         post: {},
-
-        comments: [
-
-        ],
+        comments: [],
         newComment: "",
-        title: "",
-        writer: ""
+        currentUser: localStorage.getItem("nickname")||""
       };
+    },
+    computed:
+    {
+
+        nestedComments() {
+            const commentMap = {};
+            // 각 댓글에 replies 배열을 초기화하고, map에 저장합니다.
+            this.comments.forEach(comment => {
+                comment.replies = [];
+                commentMap[comment.id] = comment;
+            });
+            const nested = [];
+            // 각 댓글이 부모 댓글을 가지고 있으면 replies에 추가, 그렇지 않으면 최상위로 처리합니다.
+            this.comments.forEach(comment => {
+                if (comment.parentComment && comment.parentComment.id) {
+                const parentId = comment.parentComment.id;
+                if (commentMap[parentId]) {
+                    commentMap[parentId].replies.push(comment);
+                }
+                } else {
+                nested.push(comment);
+                }
+            });
+            return nested;
+        }
     },
     mounted() {
       const postId = this.$route.params.id;
@@ -87,8 +154,15 @@
          }
       })
       .then(response => {
-      if (response.data.statusCode === 200) {
-        this.comments = response.data.data;
+        if (response.data.statusCode === 200) {
+        // 각 댓글 객체에 UI 제어 상태를 추가
+        this.comments = response.data.data.map(comment => ({
+          ...comment,
+          showReply: false,
+          showEdit: false,
+          newReply: "",
+          editContent: comment.content
+        }));
       }
     })
     .catch(error => {
@@ -119,9 +193,17 @@
         {
                 if(response.data.statusCode===200)
             {
-                this.comments.push(response.data.data);
+                const newCmt = {
+                    ...response.data.data,
+                    showReply: false,
+                    showEdit: false,
+                    newReply: "",
+                    editContent: response.data.data.content,
+                    replies: []
+                };
+                this.comments.push(newCmt);
                 console.log("댓글 작성이 완료되었습니다.");
-                this.newComment= '';
+                this.newComment= "";
                 
             }
         })
@@ -136,7 +218,125 @@
     {
         console.log("댓글을 써 주세요.");
     }
+      },
+      toggleReply(comment)
+      {
+        this.comments.forEach(c => {
+            if(c.id !== comment.id)
+        {
+            c.showReply = false;
+        }
+        });
+
+        comment.showReply = !comment.showReply;
+        if(comment.showReply)
+      {
+        comment.showEdit = false;
+        comment.newReply = "";
       }
+
+    },
+    toggleEdit(comment)
+    {
+        this.comments.forEach(c => {
+            if(c.id !== comment.id)
+        {
+            c.showEdit = false;
+        }
+        });
+        comment.showEdit = !comment.showEdit;
+        if(comment.showEdit)
+            {
+                comment.showReply = false;
+                comment.editContent = comment.content;
+            }else
+            {
+                comment.editContent = comment.content;
+            }
+    },
+    deleteComment(comment){
+        const postId = this.$route.params.id;
+        axios.delete(`http://localhost:8080/boards/${postId}/api/comments/${comment.id}`,
+         {
+            headers: { Authorization: `Bearer ${localStorage.getItem("jwtaccess")}`} 
+        })
+        .then(response =>
+        {
+            if(response.data.statusCode === 200)
+        {
+            this.comments = this.comments.filter(c => c.id !== comment.id);
+        }
+        })
+        .catch(err =>{ // eslint-disable-line no-unused-vars
+            console.log("댓글 삭제 오류:",err);
+        });
+    },
+    //답글 작성
+    submitReply(comment)
+    {
+        const postId = this.$route.params.id;
+            if(comment.newReply.trim() !=="")
+        {
+            axios.post(`http://localhost:8080/boards/${postId}/api/comments/${comment.id}/reply`,
+                {
+                    content: comment.newReply,
+                    writer: localStorage.getItem("nickname"),
+                    postId: postId,
+                    parentComment: comment
+                },
+                {
+                    headers: { Authorization: `Bearer ${localStorage.getItem("jwtaccess")}` }  
+                })
+                .then(response =>
+                {
+                    if(response.data.statusCode === 200)
+                {
+                    const newReply = 
+                    {
+                        ...response.data.data,
+                        showReply: false,
+                        showEdit: false,
+                        newReply: "",
+                        editContent: response.data.data.content,
+                        replies: []
+                    };
+                    this.comments.push(newReply);
+                    comment.showReply = false;
+                }
+            })
+            .catch(err => { // eslint-disable-line no-unused-vars
+                console.log("덧글 수정중 오류 발생");
+            });
+        }
+    },
+    submitEdit(comment)
+    {
+        const postId = this.$route.params.id;
+        if(comment.editContent.trim() !== "")
+    {
+        axios.put(`http://localhost:8080/boards/${postId}/api/comments/${comment.id}`,
+            {
+                content: comment.editContent,
+                writer: comment.writer
+            },
+        {
+            headers: { Authorization: `Bearer ${localStorage.getItem("jwtaccess")}`}
+        })
+        .then(response=>
+        {
+            if(response.data.statusCode === 200)
+        {
+            comment.content = comment.editContent;
+            comment.showEdit = false;
+        }
+        })
+        .catch(err =>// eslint-disable-line no-unused-vars
+        {
+            console.log("댓글 수정 중 오류 발생");
+        })
+    }
+    }
+
     }
   };
   </script>
@@ -250,7 +450,8 @@
     color: #555;
   }
   
-  .comment-text {
+  .comment-text p {
+    margin: 0 0 5px 0;
     font-size: 1rem;
     line-height: 1.4;
     word-break: break-word;
@@ -262,10 +463,7 @@
     flex-direction: column;
   }
   
-  .comment-content
-  {
-    display: flex;
-  }
+
 
   .comment-edit
   {
@@ -273,6 +471,48 @@
     margin-top: 5px;
 
   }
+
+  /* 댓글 액션 버튼 (답글, 편집, 삭제) */
+
+.comment-edit a {
+  margin-left: 10px;
+  color: #3490dc;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.reply-section,
+.edit-section {
+  display: flex;
+  margin-top: 10px;
+}
+.reply-section textarea,
+.edit-section textarea {
+  width: 100%;
+  height: 60px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  resize: none;
+  margin-bottom: 5px;
+}
+.reply-section button,
+.edit-section button {
+  padding: 6px 12px;
+  background-color: #3490dc;
+  border: none;
+  color: #fff;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-right: 5px;
+}
+
+/* 새 댓글 입력창 */
+.comment-input {
+  display: flex;
+  flex-direction: column;
+}
 
   .comment-input textarea {
     width: 100%;
@@ -294,5 +534,19 @@
     border-radius: 5px;
     cursor: pointer;
   }
+  .child-comments {
+  margin-left: 30px;
+  border-left: 2px solid #ddd;
+  padding-left: 15px;
+  margin-top: 10px;
+}
+
+.reply-item {
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  padding: 8px;
+  margin-bottom: 10px;
+}
   </style>
   

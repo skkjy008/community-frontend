@@ -12,6 +12,7 @@ const routes = [
   { path: "/create", component: CreateBoard },
   { path: "/boards", component: BoardList },
   { path: "/boards/:id", component: BoardPage },
+  { path: "/api/comments/:commentId", component: BoardPage },
   { path: "/register", name: 'Register', component: RegisterForm }
 ]
 
