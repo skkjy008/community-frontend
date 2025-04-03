@@ -84,6 +84,14 @@
             <button @click="submitComment">댓글 등록</button>
           </div>
         </div>
+        <teleport to="body">
+            <DefaultModal 
+                v-model:visible="modalVisible" 
+                :message="modalMessage"
+                :showCancel="showModalCancel"
+                @confirmed="onModalConfirmed"
+                @cancelled="onModalCancelled" />
+        </teleport>
       </main>
       <AppFooter />
     </div>
@@ -92,17 +100,22 @@
   <script>
   import AppNavbar from "@/components/AppNavbar.vue";
   import AppFooter from "@/components/AppFooter.vue";
+  import DefaultModal from "@/components/DefaultModal.vue";
   import axios from "axios";
   
   export default {
     name: "BoardPage",
-    components: { AppNavbar, AppFooter },
+    components: { AppNavbar, AppFooter, DefaultModal },
     data() {
       return {
         post: {},
         comments: [],
         newComment: "",
-        currentUser: localStorage.getItem("nickname")||""
+        currentUser: localStorage.getItem("nickname")||"",
+        modalMessage: "",
+        modalVisible: false,
+        showModalCancel: false,
+        modalCallback: null
       };
     },
     computed:
@@ -171,6 +184,23 @@
 
     },
     methods: {
+
+        onModalConfirmed()
+        {
+            if(this.modalCallback&&typeof this.modalCallback === 'function')
+        {
+            this.modalCallback();
+        }
+            this.modalCallback = null;
+            this.modalVisible = false;
+
+        },
+
+        onModalCancelled()
+        {
+            this.modalVisible = false;
+
+        },
       submitComment() {
 
         const postId = this.$route.params.id;
@@ -255,6 +285,12 @@
             }
     },
     deleteComment(comment){
+        this.modalMessage = "정말 삭제하시겠습니까?";
+        this.showModalCancel = true;
+        this.modalVisible = true;
+        
+        this.modalCallback = () =>
+    {
         const postId = this.$route.params.id;
         axios.delete(`http://localhost:8080/boards/${postId}/api/comments/${comment.id}`,
          {
@@ -266,10 +302,11 @@
         {
             this.comments = this.comments.filter(c => c.id !== comment.id);
         }
-        })
+            })
         .catch(err =>{ // eslint-disable-line no-unused-vars
             console.log("댓글 삭제 오류:",err);
-        });
+            });
+        }
     },
     //답글 작성
     submitReply(comment)

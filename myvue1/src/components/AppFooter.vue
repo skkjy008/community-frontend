@@ -1,7 +1,7 @@
 <template>
   <footer class="footer">
     <div class="footer-container">
-      <p>&copy; 2025 My Bulletin Board. All rights reserved.</p>
+      <p>&copy; 2025 My Commuity Board. All rights reserved.</p>
     </div>
   </footer>
 </template>
