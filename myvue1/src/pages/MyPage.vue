@@ -49,7 +49,7 @@
          </div>
 
          <div class="update-mystatus">
-            <button>수정</button>
+            <button @click="submitEdit">수정</button>
             <button @click="cancelMyPage">취소</button>
          </div>
 
@@ -125,7 +125,8 @@
         nickname: localStorage.getItem("nickname") || '',
         email: "",
         password: "",
-        passchk: ""
+        passchk: "",
+        user: {}
       };
     },
     computed: {
@@ -139,6 +140,7 @@
       },
     },
     methods: {
+
       fetchPosts() {
         const user = localStorage.getItem("nickname");
         axios.get(`http://localhost:8080/api/mypage/${user}`, {
@@ -148,8 +150,16 @@
         })
         .then(response => {
           if(response.data.statusCode === 200) {
-            this.posts = response.data.data;
-            this.filteredPosts = this.posts;
+            const data = response.data.data;
+            const postsArray = Array.isArray(data.posts)
+                           ? data.posts 
+                           : (data.posts ? [data.posts] : []);
+            this.posts = postsArray;
+            this.filteredPosts = postsArray;
+            this.user = data.member;
+            this.nickname = data.member.nickname;
+            this.email = data.member.email;
+
           }
         })
         .catch(error => {
