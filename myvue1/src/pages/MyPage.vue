@@ -9,6 +9,16 @@
         <div class="myInfo">
             <h2>내 정보</h2>
 
+        <!-- <div class="myInfo-user-frame">
+            <h4>아이디</h4>
+            <input 
+          class="myInfo-user" 
+          type="text"
+          v-model="username"
+          placeholder="아이디"
+          required/>
+        </div> -->
+
         <div class="myInfo-name-frame">
             <h4>닉네임</h4>
             <input 
@@ -122,11 +132,13 @@
         filteredPosts: [],
         currentPage: 1,
         itemsPerPage: 5,
+        username:"",
         nickname: localStorage.getItem("nickname") || '',
         email: "",
         password: "",
         passchk: "",
-        user: {}
+        user: {},
+        currentnickname: localStorage.getItem("nickname") || ''
       };
     },
     computed: {
@@ -142,7 +154,7 @@
     methods: {
 
       fetchPosts() {
-        const user = localStorage.getItem("nickname");
+        const user = localStorage.getItem("username");
         axios.get(`http://localhost:8080/api/mypage/${user}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("jwtaccess")}`
@@ -178,7 +190,41 @@
       cancelMyPage()
       {
         this.$router.push("/boards");
+      },
+
+      submitEdit()
+      {
+        if(this.password !== this.passchk)
+      {
+        alert("비밀번호와 비밀번호 확인이 일치하지 않습니다.");
+        return;
+
       }
+      const updateMember = {
+        nickname: this.nickname,
+        email : this.email,
+        password : this.password
+      };
+
+      axios.put(`http://localhost:8080/api/mypage/${this.currentnickname}`, updateMember, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("jwtaccess")}`
+      }
+    })
+    .then(response => {
+      if(response.data.statusCode === 200) {
+        alert("회원정보 수정에 성공했습니다.");
+        
+        localStorage.setItem("nickname",this.nickname);
+        window.location.reload();
+      }
+    })
+    .catch(error => {
+      console.error("회원정보 수정 실패:", error);
+      alert("회원정보 수정에 실패했습니다. 다시 시도해주세요.");
+     });
+    },
+
     },
     mounted() {
       this.fetchPosts();

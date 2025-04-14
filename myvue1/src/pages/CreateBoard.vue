@@ -69,6 +69,7 @@ export default {
       title: '',
       content: '',
       writer: localStorage.getItem("nickname") || '',
+      username: localStorage.getItem("username") || '',
       modalVisible: false,
       modalMessage: '',
       uploadSuccess: false,
@@ -92,6 +93,7 @@ export default {
         title: this.title,
         content: this.content,
         writer: this.writer,
+        username: this.username
       },
     {
       headers: {

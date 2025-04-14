@@ -54,6 +54,7 @@ export default {
         localStorage.setItem("jwtaccess", accessToken);
         localStorage.setItem("jwtrefresh", refreshToken);
         localStorage.setItem("nickname",response.data.nickname);
+        localStorage.setItem("username",response.data.username);
         this.$router.push("/boards");
       } catch (err) {
         this.errorMessage = "Invalid username or password";

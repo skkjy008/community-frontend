@@ -30,7 +30,7 @@
             <tr>
               <th>번호</th>
               <th>제목</th>
-              <th>작성자</th>
+              <th>닉네임</th>
               <th>작성일</th>
             </tr>
           </thead>
@@ -109,7 +109,10 @@ export default {
       })
       .then(response => {
         if(response.data.statusCode === 200) {
-          this.posts = response.data.data;
+          const postsArray = Array.isArray(response.data.data)
+          ? response.data.data
+          : (response.data.data?[response.data.data]: []);
+          this.posts = postsArray.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
           this.filteredPosts = this.posts;
         }
       })
